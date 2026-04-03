@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>猫狗品种精准识别平台</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>🐾 猫狗品种精准识别平台</h1>
+      <p class="subtitle">基于 CLIP 深度学习模型，支持图片上传、品种介绍与用户反馈。</p>
+
+      <section class="card">
+        <h2>1) 上传图片识别品种</h2>
+        <input id="imageInput" type="file" accept="image/*" />
+        <button id="predictBtn">开始识别</button>
+        <p id="status"></p>
+        <div id="result" class="hidden">
+          <img id="preview" alt="上传图片" />
+          <h3 id="breed"></h3>
+          <p id="confidence"></p>
+          <p id="description"></p>
+          <ul id="top3"></ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) 用户反馈</h2>
+        <form id="feedbackForm">
+          <input name="nickname" placeholder="昵称" required />
+          <textarea name="message" placeholder="请输入你的建议..." required></textarea>
+          <select name="rating" required>
+            <option value="5">5 - 非常满意</option>
+            <option value="4">4 - 满意</option>
+            <option value="3">3 - 一般</option>
+            <option value="2">2 - 有待改进</option>
+            <option value="1">1 - 不满意</option>
+          </select>
+          <button type="submit">提交反馈</button>
+        </form>
+        <p id="feedbackStatus"></p>
+        <div id="feedbackList"></div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
