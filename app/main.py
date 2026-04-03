@@ -48,7 +48,7 @@ def load_model() -> None:
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
     CLASS_NAMES = checkpoint["classes"]
     IMAGE_SIZE = checkpoint.get("image_size", 224)
-    ARCH = "resbreednet"
+    ARCH = checkpoint.get("arch", "seresnet34")
 
     model = build_model(num_classes=len(CLASS_NAMES)).to(DEVICE)
     model.load_state_dict(checkpoint["model_state_dict"])
