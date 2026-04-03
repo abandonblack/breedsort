@@ -24,7 +24,7 @@ DATASET_CATALOG = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="训练猫狗品种分类模型（手写 ResNet34-SE + Oxford-IIIT Pet）")
     parser.add_argument("--data-dir", type=Path, default=Path("data/oxford_iiit_pet"))
-    parser.add_argument("--epochs", type=int, default=40)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
