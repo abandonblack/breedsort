@@ -44,7 +44,7 @@ python -m app.train --data-dir data/oxford_iiit_pet --epochs 40 --batch-size 32
 ## 3. 启动服务
 
 ```bash
-python app/main.py
+python -m app.main
 ```
 
 访问：`http://127.0.0.1:8000`
