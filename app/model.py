@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from torchvision.models import ResNet34_Weights, resnet34
 
 SUPPORTED_ARCHES = ("seresnet34", "resnet34")
 
@@ -131,7 +132,7 @@ class _BaseResNet34(nn.Module):
         self.layer4 = self._make_layer(512, blocks=3, stride=2)
 
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.dropout = nn.Dropout(p=0.2)
+        self.dropout = nn.Dropout(p=0.1)
         self.fc = nn.Linear(512, num_classes)
 
         self._init_weights()
@@ -188,10 +189,35 @@ class ResNet34(_BaseResNet34):
         return BasicBlock(in_channels, out_channels, stride=stride)
 
 
-def build_model(num_classes: int, arch: str = "seresnet34") -> nn.Module:
+def _load_torchvision_imagenet_weights(model: nn.Module) -> None:
+    weights = ResNet34_Weights.IMAGENET1K_V1
+    tv_state_dict = resnet34(weights=weights).state_dict()
+
+    remapped: dict[str, torch.Tensor] = {}
+    for key, value in tv_state_dict.items():
+        if key.startswith("fc."):
+            continue
+        if key == "conv1.weight":
+            remapped["stem.0.weight"] = value
+            continue
+        if key.startswith("bn1."):
+            remapped[key.replace("bn1.", "stem.1.", 1)] = value
+            continue
+        remapped[key] = value
+
+    model.load_state_dict(remapped, strict=False)
+
+
+def build_model(num_classes: int, arch: str = "seresnet34", pretrained: bool = False) -> nn.Module:
     arch = arch.lower()
+    model: nn.Module
     if arch == "seresnet34":
-        return SEResNet34(num_classes=num_classes)
-    if arch == "resnet34":
-        return ResNet34(num_classes=num_classes)
-    raise ValueError(f"不支持的模型架构: {arch}，可选: {', '.join(SUPPORTED_ARCHES)}")
+        model = SEResNet34(num_classes=num_classes)
+    elif arch == "resnet34":
+        model = ResNet34(num_classes=num_classes)
+    else:
+        raise ValueError(f"不支持的模型架构: {arch}，可选: {', '.join(SUPPORTED_ARCHES)}")
+
+    if pretrained:
+        _load_torchvision_imagenet_weights(model)
+    return model
