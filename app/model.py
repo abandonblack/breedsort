@@ -25,10 +25,17 @@ class SEBlock(nn.Module):
         return x * weights
 
 
-class SEBasicBlock(nn.Module):
+class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_channels: int, out_channels: int, stride: int = 1, reduction: int = 16) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        stride: int = 1,
+        use_se: bool = False,
+        reduction: int = 16,
+    ) -> None:
         super().__init__()
         self.conv1 = nn.Conv2d(
             in_channels,
@@ -42,7 +49,7 @@ class SEBasicBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
-        self.se = SEBlock(out_channels, reduction=reduction)
+        self.se = SEBlock(out_channels, reduction=reduction) if use_se else nn.Identity()
 
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
@@ -68,12 +75,13 @@ class SEBasicBlock(nn.Module):
         return out
 
 
-class SEResNet34(nn.Module):
-    """手写版 ResNet34 + SE（不依赖 torchvision.models）。"""
+class ResNet34(nn.Module):
+    """手写版 ResNet34，可选 SE 注意力。"""
 
-    def __init__(self, num_classes: int, reduction: int = 16) -> None:
+    def __init__(self, num_classes: int, use_se: bool = True, reduction: int = 16) -> None:
         super().__init__()
         self.in_channels = 64
+        self.use_se = use_se
 
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
@@ -94,10 +102,26 @@ class SEResNet34(nn.Module):
         self._init_weights()
 
     def _make_layer(self, out_channels: int, blocks: int, stride: int, reduction: int) -> nn.Sequential:
-        layers = [SEBasicBlock(self.in_channels, out_channels, stride=stride, reduction=reduction)]
+        layers = [
+            BasicBlock(
+                self.in_channels,
+                out_channels,
+                stride=stride,
+                use_se=self.use_se,
+                reduction=reduction,
+            )
+        ]
         self.in_channels = out_channels
         for _ in range(1, blocks):
-            layers.append(SEBasicBlock(self.in_channels, out_channels, stride=1, reduction=reduction))
+            layers.append(
+                BasicBlock(
+                    self.in_channels,
+                    out_channels,
+                    stride=1,
+                    use_se=self.use_se,
+                    reduction=reduction,
+                )
+            )
         return nn.Sequential(*layers)
 
     def _init_weights(self) -> None:
@@ -124,5 +148,10 @@ class SEResNet34(nn.Module):
         return self.fc(x)
 
 
-def build_model(num_classes: int) -> nn.Module:
-    return SEResNet34(num_classes=num_classes)
+def build_model(num_classes: int, arch: str = "seresnet34") -> nn.Module:
+    arch = arch.lower()
+    if arch == "seresnet34":
+        return ResNet34(num_classes=num_classes, use_se=True)
+    if arch == "resnet34":
+        return ResNet34(num_classes=num_classes, use_se=False)
+    raise ValueError(f"不支持的模型架构: {arch}")

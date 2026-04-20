@@ -50,7 +50,7 @@ def load_model() -> None:
     IMAGE_SIZE = checkpoint.get("image_size", 224)
     ARCH = checkpoint.get("arch", "seresnet34")
 
-    model = build_model(num_classes=len(CLASS_NAMES)).to(DEVICE)
+    model = build_model(num_classes=len(CLASS_NAMES), arch=ARCH).to(DEVICE)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
     MODEL = model
