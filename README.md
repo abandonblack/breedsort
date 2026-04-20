@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ## 2. 训练模型（自动下载 Oxford-IIIT）
 
 ```bash
-python -m app.train --data-dir data/oxford_iiit_pet --epochs 40 --batch-size 32
+python -m app.train --data-dir data/oxford_iiit_pet --epochs 50 --batch-size 32
 ```
 
 可选高频参数：
