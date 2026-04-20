@@ -27,9 +27,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, default=Path("data/oxford_iiit_pet"))
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=3e-4)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--label-smoothing", type=float, default=0.1)
+    parser.add_argument("--label-smoothing", type=float, default=0.05)
     parser.add_argument("--image-size", type=int, default=224)
     parser.add_argument("--val-split", type=float, default=0.2)
     parser.add_argument("--workers", type=int, default=4)
@@ -90,7 +90,7 @@ def _class_name_from_path(image_path: str) -> str:
 def build_class_names(dataset: datasets.OxfordIIITPet) -> list[str]:
     id_to_name: dict[int, str] = {}
     for image_path, label in zip(dataset._images, dataset._labels):
-        class_index = int(label) - 1
+        class_index = int(label)
         if class_index not in id_to_name:
             id_to_name[class_index] = _class_name_from_path(image_path)
     return [id_to_name[idx] for idx in sorted(id_to_name.keys())]
@@ -124,7 +124,19 @@ def train_one_model(
     model = build_model(num_classes=len(class_names), arch=arch).to(device)
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    warmup_epochs = max(1, args.epochs // 10)
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer,
+        schedulers=[
+            torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.2, end_factor=1.0, total_iters=warmup_epochs),
+            torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=max(args.epochs - warmup_epochs, 1),
+                eta_min=args.lr * 0.05,
+            ),
+        ],
+        milestones=[warmup_epochs],
+    )
 
     history = {
         "epoch": [],
