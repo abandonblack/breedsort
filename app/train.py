@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
         help="需要训练并对比的模型架构",
     )
     parser.add_argument("--no-download", action="store_true", help="不自动下载 Oxford-IIIT Pet")
+    parser.add_argument(
+        "--pretrained",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="是否加载 ImageNet 预训练权重（推荐开启）",
+    )
     return parser.parse_args()
 
 
@@ -102,13 +108,21 @@ def make_splits(
     val_split: float,
     seed: int,
 ) -> tuple[Subset, Subset]:
-    total = len(train_dataset)
-    val_size = int(total * val_split)
-    train_size = total - val_size
-    generator = torch.Generator().manual_seed(seed)
-    indices = torch.randperm(total, generator=generator).tolist()
-    train_indices = indices[:train_size]
-    val_indices = indices[train_size:]
+    rng = random.Random(seed)
+    class_buckets: dict[int, list[int]] = {}
+    for idx, label in enumerate(train_dataset._labels):
+        class_buckets.setdefault(int(label), []).append(idx)
+
+    train_indices: list[int] = []
+    val_indices: list[int] = []
+    for indices in class_buckets.values():
+        rng.shuffle(indices)
+        val_count = max(1, int(len(indices) * val_split))
+        val_indices.extend(indices[:val_count])
+        train_indices.extend(indices[val_count:])
+
+    rng.shuffle(train_indices)
+    rng.shuffle(val_indices)
     return Subset(train_dataset, train_indices), Subset(val_dataset, val_indices)
 
 
@@ -121,7 +135,7 @@ def train_one_model(
     args: argparse.Namespace,
     device: torch.device,
 ) -> dict[str, object]:
-    model = build_model(num_classes=len(class_names), arch=arch).to(device)
+    model = build_model(num_classes=len(class_names), arch=arch, pretrained=args.pretrained).to(device)
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     warmup_epochs = max(1, args.epochs // 10)
@@ -366,6 +380,7 @@ def main() -> None:
                 "lr": args.lr,
                 "weight_decay": args.weight_decay,
                 "label_smoothing": args.label_smoothing,
+                "pretrained": args.pretrained,
                 "seed": args.seed,
                 "models": results,
                 "figures": {
