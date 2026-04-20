@@ -131,7 +131,7 @@ class _BaseResNet34(nn.Module):
         self.layer4 = self._make_layer(512, blocks=3, stride=2)
 
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.dropout = nn.Dropout(p=0.2)
+        self.dropout = nn.Dropout(p=0.1)
         self.fc = nn.Linear(512, num_classes)
 
         self._init_weights()
