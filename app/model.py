@@ -216,6 +216,7 @@ class ResNet34(_BaseResNet34):
 def _load_torchvision_imagenet_weights(model: nn.Module) -> None:
     weights = ResNet34_Weights.IMAGENET1K_V1
     tv_state_dict = resnet34(weights=weights).state_dict()
+    model_state_dict = model.state_dict()
 
     remapped: dict[str, torch.Tensor] = {}
     for key, value in tv_state_dict.items():
@@ -229,7 +230,15 @@ def _load_torchvision_imagenet_weights(model: nn.Module) -> None:
             continue
         remapped[key] = value
 
-    model.load_state_dict(remapped, strict=False)
+    compatible: dict[str, torch.Tensor] = {}
+    for key, value in remapped.items():
+        if key not in model_state_dict:
+            continue
+        if model_state_dict[key].shape != value.shape:
+            continue
+        compatible[key] = value
+
+    model.load_state_dict(compatible, strict=False)
 
 
 def build_model(num_classes: int, arch: str = "seresnet34", pretrained: bool = False) -> nn.Module:
